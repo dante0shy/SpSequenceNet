@@ -131,5 +131,5 @@ train/*/snap/*
 train/*/*.out
 train/*/performance.md
 *.out
-
+*.pth
 logBase.out
