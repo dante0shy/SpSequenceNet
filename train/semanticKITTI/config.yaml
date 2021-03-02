@@ -1,0 +1,11 @@
+model:
+  m : 16
+
+data:
+  val_base : "/home/dante0shy/dataset/KITTI"
+  data_base : "/home/dante0shy/dataset/KITTI"
+  dimension : 3
+  full_scale : 2048
+  scale : 20
+  shift_scale : [20,20,20]
+  batch_size : 16
