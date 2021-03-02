@@ -1,12 +1,13 @@
-#SpSequenceNet: Semantic Segmentation Network on 4D Point Clouds
+# SpSequenceNet: Semantic Segmentation Network on 4D Point Clouds
 
 PyTorch implementation of the paper "SpSequenceNet: Semantic Segmentation Network on 4D Point Clouds" in CVPR 2020.
-##TODO
+
+## TODO
 
 still testing
 
 
-##Dependencies
+## Dependencies
 
 Python >= 3.6
 PyTorch >= 1.3
