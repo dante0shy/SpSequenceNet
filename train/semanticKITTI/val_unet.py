@@ -21,14 +21,16 @@ from SpSNet.dataset import data_muti_frame as data
 from SpSNet.utils import np_ioueval
 from SpSNet import config
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+config_pos = os.path.dirname(__file__)
+config_m = yaml.load(open(os.path.join(config_pos,'config.yaml')))
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(config_m['CUDA_VISIBLE_DEVICES'])
+
 use_cuda = torch.cuda.is_available()
+
 evealer = np_ioueval.iouEval( config.N_CLASSES, ignore=config.UNKNOWN_ID)
 device = torch.device("cuda" if use_cuda else "cpu")
 update = 1
-
-config_pos = os.path.dirname(__file__)
-config_m = yaml.load(open(os.path.join(config_pos, "config.yaml")))
 
 unet=suqeeze_model.Model(config.N_CLASSES,  config_m['data']['full_scale'],config_m['model']['m'])
 if use_cuda:
@@ -44,7 +46,6 @@ log_dir = os.path.join(
     log_path,
     "unetv2_scale{}_m{}_v2".format(config_m["data"]["scale"], config_m["model"]["m"]),
 )
-log_dir = '../../pretrained'
 snap = glob.glob(os.path.join(log_dir, "net*.pth"))
 snap = sorted(snap, key=lambda x: int(x.split("-")[-1].split(".")[0]))
 
@@ -103,6 +104,7 @@ for x in sqs:
 for s in snap:
 
     start = time.time()
+    print('loading: {}'.format(s))
     unet.load_state_dict(torch.load(s))
     if True:
         # if scn.is_power2(epoch):

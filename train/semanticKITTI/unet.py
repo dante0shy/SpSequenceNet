@@ -20,13 +20,13 @@ from SpSNet.utils import np_ioueval
 from SpSNet import config
 import torch.optim as optim
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-use_cuda = torch.cuda.is_available()
-evealer = np_ioueval.iouEval( config.N_CLASSES, ignore=config.UNKNOWN_ID)
-device = torch.device('cuda' if use_cuda else 'cpu')
-
 config_pos = os.path.dirname(__file__)
 config_m = yaml.load(open(os.path.join(config_pos,'config.yaml')))
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(config_m['CUDA_VISIBLE_DEVICES'])
+use_cuda = torch.cuda.is_available()
+evealer = np_ioueval.iouEval(config.N_CLASSES, ignore=config.UNKNOWN_ID)
+device = torch.device('cuda' if use_cuda else 'cpu')
 
 
 log_path = os.path.dirname(__file__) if 'log_pos' not in config_m['data'] else config_m['data']['log_pos']

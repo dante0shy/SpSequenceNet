@@ -12,3 +12,4 @@ data:
   shift_scale : [20,20,20]
   batch_size : 16
 
+CUDA_VISIBLE_DEVICES: 1
