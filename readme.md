@@ -6,7 +6,7 @@ PyTorch implementation of the paper ["SpSequenceNet: Semantic Segmentation Netwo
 
 still testing
 
-The trained model is in [here]{https://drive.google.com/file/d/1mgOg9bsozfiXxc5EhtpVAbIcg1BXAbDu/view?usp=sharing}
+The trained model is in [here](https://drive.google.com/file/d/1mgOg9bsozfiXxc5EhtpVAbIcg1BXAbDu/view?usp=sharing)
 
 ## Dependencies
 
