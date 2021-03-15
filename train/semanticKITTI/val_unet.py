@@ -41,11 +41,17 @@ log_path = (
     if "log_pos" not in config_m["data"]
     else config_m["data"]["log_pos"]
 )
-log_path = os.path.join(log_path, "snap")
-log_dir = os.path.join(
-    log_path,
-    "unetv2_scale{}_m{}_v2".format(config_m["data"]["scale"], config_m["model"]["m"]),
-)
+
+if 'val_model_dir' not in  config_m['model']:
+    log_path = os.path.join(log_path, "snap")
+    log_dir = os.path.join(
+        log_path,
+        "unetv2_scale{}_m{}_v2".format(config_m["data"]["scale"], config_m["model"]["m"]),
+    )
+else:
+    log_path = config_m['model']['val_model_dir']
+    log_dir= log_path
+
 snap = glob.glob(os.path.join(log_dir, "net*.pth"))
 snap = sorted(snap, key=lambda x: int(x.split("-")[-1].split(".")[0]))
 
