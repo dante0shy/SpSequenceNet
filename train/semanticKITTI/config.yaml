@@ -1,5 +1,7 @@
 model:
   m : 16
+  snap : 32
+
 
 data:
   val_base : "/home/dante0shy/dataset/KITTI"
@@ -9,3 +11,4 @@ data:
   scale : 20
   shift_scale : [20,20,20]
   batch_size : 16
+

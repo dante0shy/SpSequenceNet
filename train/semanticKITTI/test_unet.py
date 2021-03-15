@@ -5,46 +5,55 @@
 # LICENSE file in the root directory of this source tree.
 
 # Options
-import os, sys, glob,tqdm,json,shutil
+import os, sys, glob,tqdm,json,shutil,yaml
 import numpy as np
 import random,time
 print(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__) ))))
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-
 import sparseconvnet as scn
 import torch#, data_gen, np_ioueval
-from SpSNet.core import suqeeze_model_v13_5 as suqeeze_model
-from SpSNet.dataset import data_muti_frame_test as data
+from SpSNet.core import network as suqeeze_model
+from SpSNet.dataset import data_muti_frame as data
 from SpSNet.utils import np_ioueval
-from SpSNet.utils import utils
+from SpSNet import config
 
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 use_cuda = torch.cuda.is_available()
-evealer = np_ioueval.evaler
 device = torch.device('cuda' if use_cuda else 'cpu')
 update = 1
 
-unet=suqeeze_model.Model()
+config_pos = os.path.dirname(__file__)
+config_m = yaml.load(open(os.path.join(config_pos,'config.yaml')))
+
+unet=suqeeze_model.Model(config.N_CLASSES,  config_m['data']['full_scale'],config_m['model']['m'])
 if use_cuda:
     unet=unet.cuda()
 
-log_path = os.path.join(os.path.dirname(__file__) , 'snap')
+dataloader = data.Dataloader(
+    data_base = config_m['data']['data_base'],
+    val_base= config_m['data']['val_base'],
+    frames= data.frames,
+    batch_size = config_m['data']['batch_size'],
+    scale = config_m['data']['scale'],
+    full_scale= config_m['data']['full_scale'], )
+
+log_path = os.path.dirname(__file__) if 'log_pos' not in config_m['data'] else config_m['data']['log_pos']
+log_path = os.path.join(log_path, 'snap')
 log_dir = os.path.join(log_path,'unetv2_scale20_m16_rep1_v2')
 snap = glob.glob(os.path.join(log_dir,'net*.pth'))
 snap = sorted(snap,key= lambda x : int(x.split('-')[-1].split('.')[0]))
-snap_num =32
+snap = ['/home/dante0shy/remote_workplace/SpSequenceNet/pretrained/net-000000032.pth',
+        '/home/dante0shy/remote_workplace/SpSequenceNet/pretrained/net-000000037.pth'
+        ]
+snap_num = config_m['model']['snap']
 if snap_num:
     snap = [ x for x in snap if str(snap_num) in x.split('/')[-1]]
-# optimizer = optim.Adam(unet.parameters())
-# print('#classifer parameters', sum([x.nelement() for x in unet.parameters()]))
-base_dir = data.input_base
-out_dit = os.path.join(data.data_base,'pre_muti_v13_5')
+
+
+base_dir = config_m["data"]["val_base"]
+out_dit = os.path.join(base_dir,'pre_v1')
 if not os.path.exists(out_dit):
     os.mkdir(out_dit)
 out_dit_pre = os.path.join(out_dit,'sequences')
@@ -59,7 +68,7 @@ log_file_format  = 'predictions/{}.label'
 log_prob_file_format  = 'predictions_prob/{}.npy'
 sqs = []
 files = []
-for sq , x , y,_ in data.test:
+for sq , x , y,_ in dataloader.data_dict["test"]:
     files.append((sq , x[-1].split('/')[-1].split('.')[0] ))
     sqs.append(sq)
 sqs = set (sqs)
@@ -95,38 +104,33 @@ for s in [snap[-1]]:
             torch.cuda.empty_cache()
             scn.forward_pass_multiplyAdd_count=0
             scn.forward_pass_hidden_states=0
-            for rep in range(1,1+data.val_reps):
-                # times = time.time()
-                for i,batch in tqdm.tqdm(enumerate(data.get_val_data_loader()),total= len(data.test)//(batch_size)):#
-                    # print('one batch load: {}'.format(time.time() - times))
-                    # times = time.time()
-                    if use_cuda:
-                        batch['x'][1] = [x.cuda() for x in batch['x'][1]]
-                        idx = batch['id']
-                        lp =  batch['lp']
-                    predictions=unet(batch['x'])
-                    start = 0
+            for i, batch in tqdm.tqdm(
+                    enumerate(dataloader.get_data_loader("test")),
+                    total=len(dataloader.data_dict["test"]) // dataloader.batch_size,
+            ):#
+                if use_cuda:
+                    batch['x'][1] = [x.cuda() for x in batch['x'][1]]
+                    idx = batch['id']
+                    lp =  batch['lp']
+                predictions=unet(batch['x'])
+                start = 0
                     # print('one batch cal: {}'.format(time.time() - times))
                     # times = time.time()
-                    for bid,id in enumerate(idx):
-                        file = files[id]
-                        prediction = predictions[start:start + batch['length'][bid]]
-                        log_prob_file = os.path.join(sq_prob_format.format(file[0]),log_prob_file_format.format(file[1]))
-                        log_file = os.path.join(sq_pre_format.format(file[0]),log_file_format.format(file[1]))
-                        if os.path.exists(log_prob_file):
-                            pre_prediction_prob = np.load(log_prob_file).astype(np.float64)
-                        else:
-                            pre_prediction_prob = np.zeros([lp[bid],np_ioueval.N_CLASSES],dtype=np.float64)
-                        pre_prediction_prob[batch['point_ids'][bid]] += prediction.cpu().data.numpy()
-                        pre_prediction = np.argmax(pre_prediction_prob,axis=-1)
-                        np.save(log_prob_file,pre_prediction_prob )
-                        # np.save(log_file,pre_prediction )
-                        tmp = np.zeros_like(pre_prediction)
-                        for k, v in data.config['learning_map_inv'].items():
-                            tmp[pre_prediction == k] = v
-                        pre_prediction = tmp
-                        pre_prediction.astype(np.uint32).tofile(log_file)
-                        start += batch['length'][bid]
-                    # print('one batch save: {}'.format( time.time()- times ))
-                    # times = time.time()
-                # break
+                for bid,id in enumerate(idx):
+                    file = files[id]
+                    prediction = predictions[start:start + batch['length'][bid]]
+                    log_prob_file = os.path.join(sq_prob_format.format(file[0]),log_prob_file_format.format(file[1]))
+                    log_file = os.path.join(sq_pre_format.format(file[0]),log_file_format.format(file[1]))
+                    if os.path.exists(log_prob_file):
+                        pre_prediction_prob = np.load(log_prob_file).astype(np.float64)
+                    else:
+                        pre_prediction_prob = np.zeros([lp[bid],config.N_CLASSES],dtype=np.float64)
+                    pre_prediction_prob[batch['point_ids'][bid]] += prediction.cpu().data.numpy()
+                    pre_prediction = np.argmax(pre_prediction_prob,axis=-1)
+                    np.save(log_prob_file,pre_prediction_prob )
+                    tmp = np.zeros_like(pre_prediction)
+                    for k, v in dataloader.config["learning_map_inv"].items():
+                        tmp[pre_prediction == k] = v
+                    pre_prediction = tmp
+                    pre_prediction.astype(np.uint32).tofile(log_file)
+                    start += batch['length'][bid]

@@ -20,7 +20,7 @@ from SpSNet.utils import np_ioueval
 from SpSNet import config
 import torch.optim as optim
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 use_cuda = torch.cuda.is_available()
 evealer = np_ioueval.iouEval( config.N_CLASSES, ignore=config.UNKNOWN_ID)
 device = torch.device('cuda' if use_cuda else 'cpu')
@@ -29,7 +29,7 @@ config_pos = os.path.dirname(__file__)
 config_m = yaml.load(open(os.path.join(config_pos,'config.yaml')))
 
 
-log_path = os.path.dirname(__file__) if 'log_pos' not in config_m['data'] else config
+log_path = os.path.dirname(__file__) if 'log_pos' not in config_m['data'] else config_m['data']['log_pos']
 log_path = os.path.join(log_path, 'snap')
 if not os.path.exists(log_path):
     os.mkdir(log_path)
@@ -55,7 +55,7 @@ optimizer = optim.Adam(unet.parameters())
 
 # '09d-'%epoch+'.pth'
 epoch_s = 0
-train_first = False
+train_first = True
 if snap:
     print('Restore from ' + snap[-1])
     unet.load_state_dict(torch.load(snap[-1]))

@@ -66,6 +66,10 @@ class Dataloader():
         locs=[]
         feats=[]
         labels=[]
+        lps= []
+        lengths= []
+        idxs_pre= []
+
         for idx,i in enumerate(tbl):
             locs_pre = []
             feats_pre = []
@@ -102,16 +106,22 @@ class Dataloader():
                 coords = self.aug_rotate(coords*self.scale,seed)
                 # coords = self.aug_rotate(coords*self.scale,seed)
                 idxs = (coords.min(1) >= 0) * (coords.max(1) < self.full_scale)
+                length_p = coords.shape[0]
+
                 coords = coords[idxs]
                 r = r[idxs]
+                length = coords.shape[0]
                 coords = torch.from_numpy(coords).long()
                 if frame_idx== pre_frame:
+                    if mode =='test':
+                        return coords, r,[0], mean,length_p,length,np.nonzero(idxs[:])[0]
                     label = np.fromfile(labels_b[frame_idx], dtype=np.uint32)
                     sem_label = label & 0xFFFF
                     for k, v in self.config['learning_map'].items():
                         sem_label[sem_label == k] = v
-                    sem_label = sem_label[idxs]
-                    return coords,r,sem_label,mean
+                    if mode == 'train':
+                        sem_label = sem_label[idxs]
+                    return coords,r,sem_label,mean,length_p,length,np.nonzero(idxs[:])[0]
                 else:
                     if coords.shape[0]:
                         return coords, r,[0],mean
@@ -120,10 +130,16 @@ class Dataloader():
             tmp_pre =get_data(pre_frame)
             locs_pre.append(torch.cat([tmp_pre[0], torch.LongTensor(tmp_pre[0].shape[0], 1).fill_(idx)], 1))
             feats_pre.append(torch.from_numpy(tmp_pre[1].reshape(tmp_pre[0].shape[0], 1)) .float()+ torch.randn(1) * 0.1)
-            labels_pre.append(torch.from_numpy(tmp_pre[2].astype(np.int32)))
+            if mode =='test':
+                labels_pre.append(tmp_pre[2])
+            else:
+                labels_pre.append(torch.from_numpy(tmp_pre[2].astype(np.int32)))
+            lps.append(tmp_pre[4])
+            lengths.append(tmp_pre[5])
+            idxs_pre.append(tmp_pre[6])
 
             if pre_frame:
-                tmp = list(map(lambda x : get_data(x,tmp_pre[-1]),range(pre_frame)))
+                tmp = list(map(lambda x : get_data(x,tmp_pre[3]),range(pre_frame)))
             else:
                 tmp = []
 
@@ -148,12 +164,13 @@ class Dataloader():
         locs=[torch.cat(loc,0) for loc in locs]
         feats=list(zip(*feats))
         feats=[torch.cat(feat,0) for feat in feats]
-        labels=torch.cat(labels,0)
-        return {'x': [locs,feats], 'y': labels.long(), 'id': tbl}
+        if mode !='test':
+            labels=torch.cat(labels,0).long()
+        return {'x': [locs,feats], 'y': labels , 'id': tbl, 'id': tbl,'point_ids' : idxs_pre,'lp': lps,'length' : lengths,}
 
     def get_data_loader(self,mode):
         assert  mode in ['train','test','valid']
-        data = self.data_dict['train']
+        data = self.data_dict[mode]
         return torch.utils.data.DataLoader(
             list(range(len(data))),batch_size=self.batch_size , collate_fn=lambda x: self._get(x,mode), num_workers=20, shuffle=mode in ['train'])
 
