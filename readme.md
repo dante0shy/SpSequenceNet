@@ -34,7 +34,7 @@ If you are validating your own trainined model, run as following:
 
 ```
 cd train/semanticKITTI
-python unet.py
+python val_unet.py
 ```
 
 If you want to use our trained model, add 'val_model_dir' under 'model' in the config.yaml.
