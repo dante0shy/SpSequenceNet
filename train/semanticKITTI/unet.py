@@ -128,7 +128,19 @@ for epoch in range(epoch_s, training_epoch):
                     batch['x'][1] = [x.cuda() for x in batch['x'][1]]
                     batch['y'] = batch['y'].cuda()
                 predictions = unet(batch['x'])
-                evealer.addBatch(predictions.max(1)[1].cpu().numpy(), batch['y'].cpu().numpy())  # TLabel
+                remap_predictions = []
+                start = 0
+                start_y = 0
+                for bid, id in enumerate( batch["id"]):
+                    prediction = predictions[start:start + batch['length'][bid]]
+                    pre_prediction_prob = np.zeros([batch["lp"][bid], config.N_CLASSES], dtype=np.float64)
+                    pre_prediction_prob[
+                        batch["point_ids"][bid]
+                    ] += prediction.cpu().data.numpy()
+
+                    evealer.addBatch(pre_prediction_prob.max(axis=1).astype(np.int), batch["y"][start_y : start_y + batch["lp"][bid]].cpu().numpy())
+                    start += batch['length'][bid]# TLabel
+                    start_y += batch["lp"][bid]
                     # break
             print('epoch : ', epoch, 'Val MegaMulAdd=',
                       scn.forward_pass_multiplyAdd_count / len(data.val) / 1e6, 'MegaHidden',
