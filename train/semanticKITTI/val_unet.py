@@ -106,12 +106,10 @@ for x in sqs:
         os.mkdir(os.path.join(pp, "predictions_prob"))
 
 
-
-# for s in snap:
-for _ in range(3):
+for s in snap:
     start = time.time()
-    # print('loading: {}'.format(s))
-    # unet.load_state_dict(torch.load(s))
+    print('loading: {}'.format(s))
+    unet.load_state_dict(torch.load(s))
     if True:
         # if scn.is_power2(epoch):
         with torch.no_grad():
