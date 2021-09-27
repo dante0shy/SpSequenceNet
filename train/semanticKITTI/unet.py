@@ -141,10 +141,9 @@ for epoch in range(epoch_s, training_epoch):
                     evealer.addBatch(pre_prediction_prob.max(axis=1).astype(np.int), batch["y"][start_y : start_y + batch["lp"][bid]].cpu().numpy())
                     start += batch['length'][bid]# TLabel
                     start_y += batch["lp"][bid]
-                    # break
             print('epoch : ', epoch, 'Val MegaMulAdd=',
-                      scn.forward_pass_multiplyAdd_count / len(data.val) / 1e6, 'MegaHidden',
-                      scn.forward_pass_hidden_states / len(data.val) / 1e6, 'time=', time.time() - start, 's')
+                      scn.forward_pass_multiplyAdd_count / len(dataloader.data_dict['valid']) / 1e6, 'MegaHidden',
+                      scn.forward_pass_hidden_states / len(dataloader.data_dict['valid']) / 1e6, 'time=', time.time() - start, 's')
             m_iou, iou = evealer.getIoU()
             log[epoch]['mIoU'] = m_iou
             tp, fp, fn = evealer.getStats()
